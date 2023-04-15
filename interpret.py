@@ -80,7 +80,10 @@ class Program:
             opcode = instr.get('opcode')
             self.instructions[order] = instr
             if opcode.upper() == 'LABEL':
-                self.labels[" ".join(instr.find('arg1').text.strip().split())] = order
+                label = " ".join(instr.find('arg1').text.strip().split())
+                if label in self.labels:
+                    sys.exit(52)
+                self.labels[label] = order
         self.orders = sorted(self.instructions.keys())
         self.instructions = OrderedDict(sorted(self.instructions.items()))
     
@@ -146,11 +149,320 @@ class Frame:
     def get_var_value(self, name):
         return self.vars[name].get_value()
     
+    def check_var(self, name):
+        if name not in self.vars:
+            return False
+        return True
+            
+    
+class Interpret:
+    def __init__(self, program):
+        self.program = program
+        self.global_frame = Frame()
+        self.local_frames = []
+        self.temp_frame = None
+        self.call_stack = []
+        self.heap = []
+        self.processed_instructions = 0
+        self.order = None
+        self.order_index = None
+
+
+    #This function returns the frame needed variable may be in
+    def define_frame(self, var_name):
+        frame_code = var_name[0:2].upper()
+        if frame_code == 'GF':
+            return self.global_frame
+        if frame_code == 'LF':
+            try:
+                frame = self.local_frames[-1]
+            except IndexError:
+                sys.exit(55)
+            return frame
+        if frame_code == 'TF':
+            if self.temp_frame == None:
+                sys.exit(55)
+            return self.temp_frame
+    
+    #This function checks if a var with that name is defined
+    def check_var_defined(self, var_name):
+        frame = self.define_frame(var_name)
+        if frame.check_var(var_name[3:]) == True:
+            return True
+        return False
         
 
+    #This function checks if a var has value
+    def check_var_init(self, var_name):
+        frame = self.define_frame(var_name)
+        type = frame.get_var_type(var_name[3:])
+        if type == None:
+            return False
+        return True
+    
+    #This function returns value of a var with defined name
+    def get_var_value(self, var_name):
+        frame = self.define_frame(var_name)
+        return frame.get_var_value(var_name[3:])
+    
+    #This function returns type of a var with defined name
+    def get_var_type(self, var_name):
+        frame = self.define_frame(var_name)
+        return frame.get_var_type(var_name[3:])
+    
+    #This function sets value of a var with defined name
+    def set_var_value(self, var_name, value):
+        frame = self.define_frame(var_name)
+        frame.add_var(var_name[3:], value)
+
+    #This function parses the string and convert it into Python format
+    def parse_string(self, string):
+        decoded_chars = []
+        i = 0
+        while i < len(string):
+            c = string[i]
+            if c == "\\":
+                decimal_code = int(string[i+1:i+4])
+                if decimal_code in [ord("#"), ord("\\"), ord(" ")] or 0 <= decimal_code <= 32:
+                    decoded_chars.append(chr(decimal_code))
+                    i += 4
+                else:
+                    decoded_chars.append("\\" + string[i+1:i+4])
+                    i += 5
+            else:
+                decoded_chars.append(c)
+                i += 1
+        return "".join(decoded_chars)
+
+    #This function analyse the literal type and convert it into Python value
+    def get_value_from_literal(self, type, arg):
+        value = Value()
+        if type == 'int':
+            value.type = Value.Types.INT
+            value.value = int(arg)
+        elif type == 'bool':
+            value.type = Value.Types.BOOL
+            if arg == 'true':
+                value.value = True
+            else:
+                value.value = False
+        elif type == 'nil':
+            value.type = Value.Types.NIL
+            value.value = None
+        elif type == 'string':
+            value.type = Value.Types.STRING
+            value.value = self.parse_string(arg)
+        return value
+    
+    #This function checks if the label is in program
+    def check_label(self, label):
+        if label in self.program.labels:
+            return True
+        else:
+            return False
+
+    def process_program(self):
+        self.order_index = 0
+        while True:
+            if self.order_index >= len(self.program.orders):
+                break
+            self.order = self.program.orders[self.order_index]
+            opcode = self.program.get_instruction(self.order).upper()
+            eval("self." + opcode + "()")
+            self.processed_instructions += 1
+
+
+    def MOVE(self): #<var> <symb>
+        print('move')
+
+        arg1 = self.program.get_argument_value(self.order, 1)
+        if self.check_var_defined(arg1) == False:
+            sys.exit(54)
+        arg2 = self.program.get_argument_value(self.order, 2)
+        arg_type = self.program.get_argument_type(self.order, 2)
+        if arg_type == 'var':
+            if self.check_var_defined(arg2) == False:
+                sys.exit(54)
+            if self.check_var_init(arg2) == False:
+                sys.exit(56)
+            self.set_var_value(arg1, self.get_var_value(arg2))
+        else:
+            value = self.get_value_from_literal(arg_type, arg2)
+            self.set_var_value(arg1, value)
+
+        self.order_index += 1
+    
+    def CREATEFRAME(self):
+        print('createframe')
+
+        self.temp_frame = Frame()
+        self.order_index += 1
+    
+    def PUSHFRAME(self):
+        print('pushframe')
+        
+        if self.temp_frame == None:
+            sys.exit(55)
+        self.local_frames.append(self.temp_frame)
+        self.temp_frame = None
+        self.order_index += 1
+    
+    def POPFRAME(self):
+        print('popframe')
+
+        if len(self.local_frames) == 0:
+            sys.exit(55)
+        self.temp_frame == self.local_frames.pop()
+        self.order_index += 1
+    
+    def DEFVAR(self):   #<var>
+        print('defvar')
+
+        var = self.program.get_argument_value(self.order, 1)
+        if self.check_var_defined(var) == True:
+            sys.exit(52)
+        self.set_var_value(var, Value())
+        self.order_index += 1
+    
+    def CALL(self): #<label>
+        print('call')
+
+        label = self.program.get_argument_value(self.order, 1)
+        if not self.check_label(label):
+            sys.exit(52)
+        self.call_stack.append(self.order_index + 1)
+        self.order_index = self.program.orders.index(self.program.labels[label])
+
+    def RETURN(self):
+        print('return')
+
+        if len(self.call_stack) == 0:
+            sys.exit(56)
+        ret_index = self.call_stack.pop()
+        self.order_index = ret_index
+        return
+    
+    def PUSHS(self):    #<symb>
+        print('pushs')
+
+        symb = self.program.get_argument_value(self.order, 1)
+        type = self.program.get_argument_type(self.order, 1)
+        value = Value()
+        if type == 'var':
+            if self.check_var_defined(symb) == False:
+                sys.exit(54)
+            if self.check_var_init(symb) == False:
+                sys.exit(56)
+            value.type = self.get_var_type(symb)
+            value.value = self.get_var_value(symb)
+        else:
+            value = self.get_value_from_literal(type, symb)
+
+        self.heap.append(value)
+        self.order_index += 1
+
+    def POPS(self): #<var>
+        print('pops')
+        
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+        if len(self.heap) == 0:
+            sys.exit(56)
+        value = self.heap.pop()
+        self.set_var_value(var, value)
+        self.order_index += 1
+        
+    def ADD(self):
+        return
+    def SUB(self):
+        return
+    def MUL(self):
+        return
+    def IDIV(self):
+        return
+    def LT(self):
+        return
+    def GT(self):
+        return
+    def EQ(self):
+        return
+    def AND(self):
+        return
+    def OR(self):
+        return
+    def NOT(self):
+        return
+    def INT2CHAR(self):
+        return
+    def STRI2INT(self):
+        return
+    def WRITE(self):
+        return
+    def CONCAT(self):
+        return
+    def STRLEN(self):
+        return
+    def GETCHAR(self):
+        return
+    def SETCHAR(self):
+        return
+    def TYPE(self):
+        return
+    
+    def LABEL(self):
+        self.order_index += 1
+        return
+    
+    def JUMP(self):
+        return
+    def JUMPIFEQ(self):
+        return
+    def JUMPIFNEQ(self):
+        return
+    def EXIT(self):
+        return
+    
+    def DPRINT(self):
+        print('dprint')
+
+        sys.stderr.write("###############\n")
+        sys.stderr.write("INTERPRET STATE\n")
+        sys.stderr.write("\tGLOBAL FRAME:\n")
+        for elem in self.global_frame.vars:
+            sys.stderr.write(f"\t\tVar name: {elem},\ttype: {self.global_frame.vars[elem].type},\tvalue: {self.global_frame.vars[elem].value}\n")
+        sys.stderr.write("\tLOCAL FRAMES:\n")
+        lf_count = 0
+        for frame in self.local_frames:
+            sys.stderr.write(f"\t\tLOCAL FRAME {lf_count + 1}\n")
+            for elem in self.local_frames[lf_count].vars:
+                sys.stderr.write(f"\t\t\tVar name: {elem},\ttype: {self.local_frames[lf_count].vars[elem].type},\tvalue: {self.local_frames[lf_count].vars[elem].value}\n")
+            lf_count += 1
+        sys.stderr.write("\tTEMPORARY FRAME:\n")
+        if self.temp_frame == None:
+            sys.stderr.write("\t\tNOT DEFINED\n")
+        else:
+            for elem in self.temp_frame.vars:
+                sys.stderr.write(f"\t\tVar name: {elem},\ttype: {self.temp_frame.vars[elem].type},\tvalue: {self.temp_frame.vars[elem].value}\n")
+        sys.stderr.write(f"\tPROCESSED INSTRUCTIONS COUNT: {self.processed_instructions}\n")
+        sys.stderr.write(f"\tPOSITION IN CODE: {self.order_index + 1}\n")
+        sys.stderr.write("\tCALL STACK:\n")
+        if len(self.call_stack) != 0:
+            sys.stderr.write("\t\t")
+        for elem in self.call_stack:
+            sys.stderr.write(f"{elem} - ")
+        if len(self.call_stack) != 0:
+            sys.stderr.write("\n")
+        sys.stderr.write("\tHEAP:\n")
+        for elem in self.heap:
+            sys.stderr.write(f"\t\ttype: {elem.type},\tvalue: {elem.value}\n")
+        sys.stderr.write("###############\n")
+        self.order_index += 1
+
+    def BREAK(self):
+        return
+        
 program = Program('test.xml')
-test_value = Value()
-test_value.set_value(Value.Types.INT, 5)
-test_frame = Frame()
-test_frame.add_var('count', test_value)
-print(test_frame.get_var_value('count'))
+interpret = Interpret(program)
+
+interpret.process_program()
