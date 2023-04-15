@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 import sys
+from collections import OrderedDict
 
 opcodes = [ 'MOVE', 'CREATEFRAME', 'PUSHFRAME', 'POPFRAME', 'DEFVAR', 'CALL', 'RETURN',
             'PUSHS', 'POPS', 'ADD', 'SUB', 'MUL', 'IDIV', 'LT', 'GT', 'EQ', 'AND', 'OR', 'NOT',
@@ -29,7 +30,7 @@ class Program:
         
         #Checking instructions and their orders
         orders = []
-        instructions = set(self.prog.findall('*'))
+        instructions = self.prog.findall('*')
         for instr in instructions:
             if instr.tag != 'instruction':
                 return False
@@ -53,9 +54,26 @@ class Program:
                 return False
             
         #Now we can be sure we have XML code that describes a IPPcode23 code
-        #and all instructions have all necessary attributes with correct values 
+        #and all instructions have all necessary attributes with correct values
+        #It is necessary to add that we do not contol the count and semantic of instructions' arguments.
+        #We suppose, that if the opcode and order are correct, the whole instruction is correct,
+        #because it is a type of error that must be eliminated in parse.php
         return True
-
+    
+    #This fumction reads all instructions form an XML tree and creates a dictionary from them.
+    #Then this dictionary is transformed into list so we can easily move on it.
+    #This function also creates a dictionary for labels
+    def make_instructions_list(self):
+        self.instructions = {}
+        self.labels = {}
+        instructions = self.prog.findall('*')
+        for instr in instructions:
+            order = int(instr.get('order'))
+            opcode = instr.get('opcode')
+            self.instructions[order] = instr
+            if opcode.upper() == 'LABEL':
+                self.labels[" ".join(instr.find('arg1').text.strip().split())] = order
+        self.instructions = sorted(self.instructions.items())
     def get_command(self, order):
         return None
     def get_atribute(self, order, attrib_num):
@@ -65,6 +83,7 @@ class Program:
 program = Program('test.xml')
 if not program.check_xml():
     print('Bad')
+program.make_instructions_list()
 
 #tree = ET.parse('test.xml')
 #root = tree.getroot()
