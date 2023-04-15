@@ -132,6 +132,25 @@ class Value:
     def get_value(self):
         return self.value
 
+#This class lets to group variable by frames and provides methods for adding new varibale and reading existing ones
+class Frame:
+    def __init__(self):
+        self.vars = {}
+    
+    def add_var(self, name, value):
+        self.vars[name] = value
+    
+    def get_var_type(self, name):
+        return self.vars[name].get_type()
+    
+    def get_var_value(self, name):
+        return self.vars[name].get_value()
+    
+        
+
 program = Program('test.xml')
 test_value = Value()
 test_value.set_value(Value.Types.INT, 5)
+test_frame = Frame()
+test_frame.add_var('count', test_value)
+print(test_frame.get_var_value('count'))
