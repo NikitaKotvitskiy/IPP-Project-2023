@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 import sys
 from collections import OrderedDict
+from enum import Enum
 
 #This list includes all opcodes
 opcodes = [ 'MOVE', 'CREATEFRAME', 'PUSHFRAME', 'POPFRAME', 'DEFVAR', 'CALL', 'RETURN',
@@ -17,6 +18,9 @@ class Program:
         except ET.ParseError:
             sys.exit(31)
         self.prog = self.prog.getroot()
+        if not self.check_xml():
+            sys.exit(32)
+        self.make_instructions_list()
 
     #This function includes XML semantic checks
     def check_xml(self):
@@ -105,22 +109,29 @@ class Program:
         value = " ".join(arg.text.strip().split())
         return value
 
+#This class makes work with variables values much easier.
+#It stores type and value and provides methods to change it
+class Value:
+    class Types(Enum):
+        INT = 1
+        STRING = 2
+        BOOL = 3
+        NIL = 4
+
+    def __init__(self):
+        self.type = None
+        self.value = None
+
+    def set_value(self, new_type, new_value):
+        self.type = new_type
+        self.value = new_value
+
+    def get_type(self):
+        return self.type
+
+    def get_value(self):
+        return self.value
 
 program = Program('test.xml')
-if not program.check_xml():
-    print('Bad')
-program.make_instructions_list()
-print(program.get_instruction(5))
-print(program.get_argument_type(5, 1))
-print(program.get_argument_value(5, 1))
-
-#tree = ET.parse('test.xml')
-#root = tree.getroot()
-#program = Program()
-#for com in root.iter():
-#    if (com.attrib['opcode'].upper == "LABEL"):
-#        program.add_label(com.find('arg1'), int(com.attrib['order']))
-#    command = Command(com.attrib['opcode'].upper)
-#    for attr in com.iter:
-#        Attribute = Attribute(attr.)
-#    program.add_command()
+test_value = Value()
+test_value.set_value(Value.Types.INT, 5)
