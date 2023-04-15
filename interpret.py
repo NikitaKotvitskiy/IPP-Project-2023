@@ -2,11 +2,14 @@ import xml.etree.ElementTree as ET
 import sys
 from collections import OrderedDict
 
+#This list includes all opcodes
 opcodes = [ 'MOVE', 'CREATEFRAME', 'PUSHFRAME', 'POPFRAME', 'DEFVAR', 'CALL', 'RETURN',
             'PUSHS', 'POPS', 'ADD', 'SUB', 'MUL', 'IDIV', 'LT', 'GT', 'EQ', 'AND', 'OR', 'NOT',
             'INT2CHAR', 'STRI2INT', 'READ', 'WRITE', 'CONCAT', 'STRLEN', 'GETCHAR', 'SETCHAR', 'TYPE',
             'LABEL', 'JUMP', 'JUMPIFEQ', 'JUMPIFNEQ', 'EXIT', 'DPRINT', 'BREAK' ]   
 
+#This class provides comfortable interface for getting information about program's instructions and their arguments
+#It also contains checker of XML validity
 class Program:
     def __init__(self, source):
         try:
@@ -59,11 +62,12 @@ class Program:
         #We suppose, that if the opcode and order are correct, the whole instruction is correct,
         #because it is a type of error that must be eliminated in parse.php
         return True
-    
+
     #This fumction reads all instructions form an XML tree and creates a dictionary from them.
-    #Then this dictionary is transformed into list so we can easily move on it.
-    #This function also creates a dictionary for labels
+    #It also creates the list of orders which can be used for easy moving on dictionary
+    #It also creates a dictionary for labels
     def make_instructions_list(self):
+        self.orders = []
         self.instructions = {}
         self.labels = {}
         instructions = self.prog.findall('*')
@@ -73,17 +77,42 @@ class Program:
             self.instructions[order] = instr
             if opcode.upper() == 'LABEL':
                 self.labels[" ".join(instr.find('arg1').text.strip().split())] = order
-        self.instructions = sorted(self.instructions.items())
-    def get_command(self, order):
-        return None
-    def get_atribute(self, order, attrib_num):
-        return None
+        self.orders = sorted(self.instructions.keys())
+        self.instructions = OrderedDict(sorted(self.instructions.items()))
+    
+    #This functions returns the opcode of an instruction with defined order
+    def get_instruction(self, order):
+        inst = self.instructions[order]
+        opcode = inst.attrib['opcode']
+        return opcode
+
+    #This help function returns the defined XML element of argument of inctruction with defined order 
+    def get_argument(self, order, attrib_num):
+        instr = self.instructions[order]
+        argStr = 'arg' + str(attrib_num)
+        arg = instr.find(argStr)
+        return arg
+    
+    #This function returns the type of defined argument of instruction with defined order
+    def get_argument_type(self, order, attrib_num):
+        arg = self.get_argument(order, attrib_num)
+        type = arg.attrib['type']
+        return type
+
+    #This function returns the value of defined argument of instruction with defined order
+    def get_argument_value(self, order, attrib_num):
+        arg = self.get_argument(order, attrib_num)
+        value = " ".join(arg.text.strip().split())
+        return value
 
 
 program = Program('test.xml')
 if not program.check_xml():
     print('Bad')
 program.make_instructions_list()
+print(program.get_instruction(5))
+print(program.get_argument_type(5, 1))
+print(program.get_argument_value(5, 1))
 
 #tree = ET.parse('test.xml')
 #root = tree.getroot()
