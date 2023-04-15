@@ -2,37 +2,40 @@
 <program language="IPPcode23">
     <instruction order="1" opcode="DEFVAR">
         <arg1 type="var">
-            GF@counter
+            GF@var1
         </arg1>
     </instruction>
-    <instruction order="2" opcode="MOVE">
+    <instruction order="2" opcode="DEFVAR">
         <arg1 type="var">
-            GF@counter
+            GF@var2
+        </arg1>
+    </instruction>
+    <instruction order="3" opcode="MOVE">
+        <arg1 type="var">
+            GF@var1
         </arg1>
         <arg2 type="int"> 
-            10
+            0    
         </arg2>
     </instruction>
-    <instruction order="3" opcode="PUSHS">
+    <instruction order="4" opcode="MOVE">
         <arg1 type="var">
-            GF@counter
+            GF@var2
         </arg1>
+        <arg2 type="nil"> 
+        </arg2>
     </instruction>
-    <instruction order="4" opcode="PUSHS">
-        <arg1 type="bool">
-            false
-        </arg1>
-    </instruction>
-    <instruction order="5" opcode="DEFVAR">
+    <instruction order="5" opcode="EQ">
         <arg1 type="var">
-            GF@var
+            GF@var1
         </arg1>
+        <arg2 type="var">
+            GF@var1
+        </arg2>
+        <arg3 type="var">
+            GF@var2
+        </arg3>
     </instruction>
-    <instruction order="6" opcode="POPS">
-        <arg1 type="var">
-            GF@var
-        </arg1>
-    </instruction>
-    <instruction order="7" opcode="DPRINT">
+    <instruction order="6" opcode="BREAK">
     </instruction>
 </program>

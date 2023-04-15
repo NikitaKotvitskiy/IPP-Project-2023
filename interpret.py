@@ -260,6 +260,63 @@ class Interpret:
             return True
         else:
             return False
+    
+    #This help function analyse a symbol, check its definition and initialization and returns it's value
+    def get_symb_value(self, type, val):
+        if type == 'var':
+            if not self.check_var_defined(val):
+                sys.exit(54)
+            if not self.check_var_init(val):
+                sys.exit(56)
+            value = Value()
+            value.type = self.get_var_type(val)
+            value.value = self.get_var_value(val)
+        else:
+            value = self.get_value_from_literal(type, val)
+        return value
+    
+
+    #This help function realize checks of types and var existances for math instructions and returns two values
+    def math(self):
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+        symb1 = self.program.get_argument_value(self.order, 2)
+        type1 = self.program.get_argument_type(self.order, 2)
+        symb2 = self.program.get_argument_value(self.order, 3)
+        type2 = self.program.get_argument_type(self.order, 3)
+
+        value1 = self.get_symb_value(type1, symb1)
+        value2 = self.get_symb_value(type2, symb2)
+
+        if value1.type != Value.Types.INT or value2.type != Value.Types.INT:
+            sys.exit(53)
+
+        return var, value1, value2
+    
+    #This help function realize all checks for relative instruction and returns two values, which can be easily compared
+    def relative(self):
+        symb1 = self.program.get_argument_value(self.order, 2)
+        type1 = self.program.get_argument_type(self.order, 2)
+        symb2 = self.program.get_argument_value(self.order, 3)
+        type2 = self.program.get_argument_type(self.order, 3)
+    
+        value1 = self.get_symb_value(type1, symb1)
+        value2 = self.get_symb_value(type2, symb2)
+
+        if value1.type != Value.Types.NIL and value2.type != Value.Types.NIL:
+            if value1.type != value2.type:
+                sys.exit(53)
+        if value1.type == Value.Types.NIL and value2.type == Value.Types.NIL:
+            sys.exit(53)
+        if value1.type == Value.Types.NIL:
+            value1.type == value2.type
+            value1.value = value2.value * 0
+        if value2.type == Value.Types.NIL:
+            value2.type == value1.type
+            value2.value = value1.value * 0
+        
+        return value1, value2
 
     def process_program(self):
         self.order_index = 0
@@ -373,20 +430,74 @@ class Interpret:
         self.set_var_value(var, value)
         self.order_index += 1
         
-    def ADD(self):
-        return
-    def SUB(self):
-        return
-    def MUL(self):
-        return
-    def IDIV(self):
-        return
-    def LT(self):
-        return
-    def GT(self):
-        return
-    def EQ(self):
-        return
+    def ADD(self):  #<var> <symb1> <symb2>
+        print('add')
+
+        var, value1, value2 = self.math()
+        newValue = Value()
+        newValue.set_value(Value.Types.INT, value1.value + value2.value)
+        self.set_var_value(var, newValue)
+        self.order_index += 1
+
+    def SUB(self):  #<var> <symb1> <symb2>
+        print('sub')
+
+        var, value1, value2 = self.math()
+        newValue = Value()
+        newValue.set_value(Value.Types.INT, value1.value - value2.value)
+        self.set_var_value(var, newValue)
+        self.order_index += 1
+
+    def MUL(self):  #<var> <symb1> <symb2>
+        print('mul')
+
+        var, value1, value2 = self.math()
+        newValue = Value()
+        newValue.set_value(Value.Types.INT, value1.value * value2.value)
+        self.set_var_value(var, newValue)
+        self.order_index += 1
+
+    def IDIV(self): #<var> <symb1> <symb2>
+        print('idiv')
+
+        var, value1, value2 = self.math()
+        if value2.value == 0:
+            sys.exit(57)
+        newValue = Value()
+        newValue.set_value(Value.Types.INT, value1.value // value2.value)
+        self.set_var_value(var, newValue)
+        self.order_index += 1
+    
+    def LT(self):   #<var> <symb1> <symb2>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+        value1, value2 = self.relative()
+        newValue = Value()
+        newValue.set_value(value1.type, value1.value < value2.value)
+        self.set_var_value(var, newValue)
+        self.order_index += 1
+
+    def GT(self):   #<var> <symb1> <symb2>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+        value1, value2 = self.relative()
+        newValue = Value()
+        newValue.set_value(value1.type, value1.value > value2.value)
+        self.set_var_value(var, newValue)
+        self.order_index += 1
+    
+    def EQ(self):   #<var> <symb1> <symb2>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+        value1, value2 = self.relative()
+        newValue = Value()
+        newValue.set_value(value1.type, value1.value == value2.value)
+        self.set_var_value(var, newValue)
+        self.order_index += 1
+    
     def AND(self):
         return
     def OR(self):
@@ -424,7 +535,10 @@ class Interpret:
         return
     
     def DPRINT(self):
-        print('dprint')
+        return
+
+    def BREAK(self):
+        print('break')
 
         sys.stderr.write("###############\n")
         sys.stderr.write("INTERPRET STATE\n")
@@ -458,9 +572,6 @@ class Interpret:
             sys.stderr.write(f"\t\ttype: {elem.type},\tvalue: {elem.value}\n")
         sys.stderr.write("###############\n")
         self.order_index += 1
-
-    def BREAK(self):
-        return
         
 program = Program('test.xml')
 interpret = Interpret(program)
