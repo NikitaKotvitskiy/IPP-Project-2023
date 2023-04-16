@@ -14,8 +14,8 @@
         <arg1 type="var">
             GF@var1
         </arg1>
-        <arg2 type="string"> 
-            abc
+        <arg2 type="nil"> 
+
         </arg2>
     </instruction>
     <instruction order="4" opcode="MOVE">
@@ -26,16 +26,10 @@
             1 
         </arg2>
     </instruction>
-    <instruction order="5" opcode="STRI2INT">
+    <instruction order="5" opcode="WRITE">
         <arg1 type="var">
             GF@var1
         </arg1>
-        <arg2 type="var">
-            GF@var1
-        </arg2>
-        <arg3 type="var">
-            GF@var2
-        </arg3>
     </instruction>
     <instruction order="6" opcode="BREAK">
     </instruction>

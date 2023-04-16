@@ -353,8 +353,6 @@ class Interpret:
 
 
     def MOVE(self): #<var> <symb>
-        print('move')
-
         arg1 = self.program.get_argument_value(self.order, 1)
         if self.check_var_defined(arg1) == False:
             sys.exit(54)
@@ -373,14 +371,10 @@ class Interpret:
         self.order_index += 1
     
     def CREATEFRAME(self):
-        print('createframe')
-
         self.temp_frame = Frame()
         self.order_index += 1
     
     def PUSHFRAME(self):
-        print('pushframe')
-        
         if self.temp_frame == None:
             sys.exit(55)
         self.local_frames.append(self.temp_frame)
@@ -388,16 +382,12 @@ class Interpret:
         self.order_index += 1
     
     def POPFRAME(self):
-        print('popframe')
-
         if len(self.local_frames) == 0:
             sys.exit(55)
         self.temp_frame == self.local_frames.pop()
         self.order_index += 1
     
     def DEFVAR(self):   #<var>
-        print('defvar')
-
         var = self.program.get_argument_value(self.order, 1)
         if self.check_var_defined(var) == True:
             sys.exit(52)
@@ -405,8 +395,6 @@ class Interpret:
         self.order_index += 1
     
     def CALL(self): #<label>
-        print('call')
-
         label = self.program.get_argument_value(self.order, 1)
         if not self.check_label(label):
             sys.exit(52)
@@ -414,8 +402,6 @@ class Interpret:
         self.order_index = self.program.orders.index(self.program.labels[label])
 
     def RETURN(self):
-        print('return')
-
         if len(self.call_stack) == 0:
             sys.exit(56)
         ret_index = self.call_stack.pop()
@@ -423,8 +409,6 @@ class Interpret:
         return
     
     def PUSHS(self):    #<symb>
-        print('pushs')
-
         symb = self.program.get_argument_value(self.order, 1)
         type = self.program.get_argument_type(self.order, 1)
         value = Value()
@@ -442,8 +426,6 @@ class Interpret:
         self.order_index += 1
 
     def POPS(self): #<var>
-        print('pops')
-        
         var = self.program.get_argument_value(self.order, 1)
         if not self.check_var_defined(var):
             sys.exit(54)
@@ -454,8 +436,6 @@ class Interpret:
         self.order_index += 1
         
     def ADD(self):  #<var> <symb1> <symb2>
-        print('add')
-
         var, value1, value2 = self.math()
         newValue = Value()
         newValue.set_value(Value.Types.INT, value1.value + value2.value)
@@ -463,8 +443,6 @@ class Interpret:
         self.order_index += 1
 
     def SUB(self):  #<var> <symb1> <symb2>
-        print('sub')
-
         var, value1, value2 = self.math()
         newValue = Value()
         newValue.set_value(Value.Types.INT, value1.value - value2.value)
@@ -472,8 +450,6 @@ class Interpret:
         self.order_index += 1
 
     def MUL(self):  #<var> <symb1> <symb2>
-        print('mul')
-
         var, value1, value2 = self.math()
         newValue = Value()
         newValue.set_value(Value.Types.INT, value1.value * value2.value)
@@ -481,8 +457,6 @@ class Interpret:
         self.order_index += 1
 
     def IDIV(self): #<var> <symb1> <symb2>
-        print('idiv')
-
         var, value1, value2 = self.math()
         if value2.value == 0:
             sys.exit(57)
@@ -604,8 +578,51 @@ class Interpret:
         self.set_var_value(var, newValue)
         self.order_index += 1
 
-    def WRITE(self):
-        return
+
+    def READ(self): #<var> <type>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+
+        needed_type = self.program.get_argument_value(self.order, 2)
+        value = Value()
+        try:
+            if needed_type == 'int':
+                inp = int(input())
+                value.type = Value.Types.INT
+                value.value = inp
+            elif needed_type == 'bool':
+                inp = input()
+                if inp == 'true':
+                    value.value = True
+                else:
+                    value.value = False
+                value.type = Value.Types.BOOL
+            elif needed_type == 'string':
+                inp = input()
+                value.type = Value.Types.STRING
+                value.value = inp
+        except:
+            value.type = Value.Types.NIL
+
+        self.set_var_value(var, value)
+        self.order_index += 1
+    
+    def WRITE(self):    #<symb>
+        symb = self.program.get_argument_value(self.order, 1)
+        type = self.program.get_argument_type(self.order, 1)
+        value = self.get_symb_value(type, symb)
+        if value.type == Value.Types.INT or value.type == Value.Types.STRING:
+            print(value.value)
+        elif value.type == Value.Types.NIL:
+            print('')
+        else:
+            if value.value == True:
+                print('true')
+            else:
+                print('false')
+        self.order_index += 1
+    
     def CONCAT(self):
         return
     def STRLEN(self):
@@ -634,8 +651,6 @@ class Interpret:
         return
 
     def BREAK(self):
-        print('break')
-
         sys.stderr.write("###############\n")
         sys.stderr.write("INTERPRET STATE\n")
         sys.stderr.write("\tGLOBAL FRAME:\n")
