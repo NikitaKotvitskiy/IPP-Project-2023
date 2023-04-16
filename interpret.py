@@ -557,10 +557,53 @@ class Interpret:
         self.set_var_value(var, value)
         self.order_index += 1
 
-    def INT2CHAR(self):
-        return
-    def STRI2INT(self):
-        return
+    def INT2CHAR(self): #<var> <symb>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+
+        symb = self.program.get_argument_value(self.order, 2)
+        type = self.program.get_argument_type(self.order, 2)
+
+        value = self.get_symb_value(type, symb)
+        if value.type != Value.Types.INT:
+            sys.exit(53)
+
+        try:
+            unicode_char = chr(value.value)
+        except ValueError:
+            sys.exot(58)
+
+        newValue = Value()
+        newValue.set_value(Value.Types.STRING, unicode_char)
+        self.set_var_value(var, newValue)
+        self.order_index += 1
+    
+    def STRI2INT(self): #<var> <symb1> <symb2>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+
+        symb1 = self.program.get_argument_value(self.order, 2)
+        type1 = self.program.get_argument_type(self.order, 2)
+        symb2 = self.program.get_argument_value(self.order, 3)
+        type2 = self.program.get_argument_type(self.order, 3)
+
+        value1 = self.get_symb_value(type1, symb1)
+        value2 = self.get_symb_value(type2, symb2)
+
+        if value1.type != Value.Types.STRING or value2.type != Value.Types.INT:
+            sys.exit(53)
+        
+        if value2.value >= len(value1.value):
+            sys.exit(58)
+        
+        newValue = Value()
+        newValue.type = Value.Types.STRING
+        newValue.value = ord(value1.value[value2.value])
+        self.set_var_value(var, newValue)
+        self.order_index += 1
+
     def WRITE(self):
         return
     def CONCAT(self):
