@@ -623,32 +623,175 @@ class Interpret:
                 print('false')
         self.order_index += 1
     
-    def CONCAT(self):
-        return
-    def STRLEN(self):
-        return
-    def GETCHAR(self):
-        return
-    def SETCHAR(self):
-        return
-    def TYPE(self):
-        return
-    
+    def CONCAT(self):   #<var> <symb1> <symb2>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+
+        symb1 = self.program.get_argument_value(self.order, 2)
+        type1 = self.program.get_argument_type(self.order, 2)
+        symb2 = self.program.get_argument_value(self.order, 3)
+        type2 = self.program.get_argument_type(self.order, 3)
+
+        value1 = self.get_symb_value(type1, symb1)
+        value2 = self.get_symb_value(type2, symb2)
+
+        if value1.type != Value.Types.STRING or value2.type != Value.Types.STRING:
+            sys.exit(53)
+        value = Value()
+        value.type = Value.Types.STRING
+        value.value = value1.value + value2.value
+
+        self.set_var_value(var, value)
+        self.order_index += 1
+
+    def STRLEN(self):   #<var> <symb>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+
+        symb = self.program.get_argument_value(self.order, 2)
+        type = self.program.get_argument_type(self.order, 2)
+        val = self.get_symb_value(type, symb)
+
+        if val.type != Value.Types.STRING:
+            sys.exit(53)
+        value = Value()
+        value.type = Value.Types.INT
+        value.value = len(val.value)
+        self.set_var_value(var, value)
+        self.order_index += 1
+
+    def GETCHAR(self):  #<var> <symb1> <symb2>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+
+        symb1 = self.program.get_argument_value(self.order, 2)
+        type1 = self.program.get_argument_type(self.order, 2)
+        symb2 = self.program.get_argument_value(self.order, 3)
+        type2 = self.program.get_argument_type(self.order, 3)
+
+        value1 = self.get_symb_value(type1, symb1)
+        value2 = self.get_symb_value(type2, symb2)
+
+        if value1.type != Value.Types.STRING or value2.type != Value.Types.INT:
+            sys.exit(53)
+        if value2.value >= len(value1.value):
+            sys.exit(58)
+
+        value = Value()
+        value.type = Value.Types.STRING
+        value.value = value1.value[value2.value]
+        self.set_var_value(var, value)
+        self.order_index += 1
+
+    def SETCHAR(self):  #<var> <symb1> <symb2>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+        if not self.check_var_init(var):
+            sys.exit(56)
+
+        var_val = self.program.get_argument_value(self.order, 1)
+        var_type = self.program.get_argument_type(self.order, 1)
+        symb1 = self.program.get_argument_value(self.order, 2)
+        type1 = self.program.get_argument_type(self.order, 2)
+        symb2 = self.program.get_argument_value(self.order, 3)
+        type2 = self.program.get_argument_type(self.order, 3)
+
+        value1 = self.get_symb_value(var_type, var_val)
+        value2 = self.get_symb_value(type1, symb1)
+        value3 = self.get_symb_value(type2, symb2)
+
+        if value1.type != Value.Types.STRING or value2.type != Value.Types.INT or value3.type != Value.Types.STRING:
+            sys.exit(53)
+        if value2.value >= len(value1.value):
+            sys.exit(58)
+
+        print(value1.value)
+        print(value2.value)
+        print(value3.value)
+        value = Value()
+        value.type = Value.Types.STRING
+        value.value = value1.value[:value2.value] + value3.value[0] + value1.value[value2.value + 1:]
+        self.set_var_value(var, value)
+        self.order_index += 1
+
+    def TYPE(self): #<var> <symb>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+
+        symb = self.program.get_argument_value(self.order, 2)
+        type = self.program.get_argument_type(self.order, 2)
+        val = self.get_symb_value(type, symb)
+
+        value = Value()
+        value.type = Value.Types.STRING
+        if val.type == Value.Types.INT:
+            value.value = 'int'
+        elif val.type == Value.Types.STRING:
+            value.value = 'string'
+        elif val.type == Value.Types.BOOL:
+            value.value = 'bool'
+        elif val.type == Value.Types.NIL:
+            value.value = 'nil'
+        else:
+            value.value = ''
+        
+        self.set_var_value(var, value)
+        self.order_index += 1
+
     def LABEL(self):
         self.order_index += 1
         return
     
-    def JUMP(self):
-        return
-    def JUMPIFEQ(self):
-        return
-    def JUMPIFNEQ(self):
-        return
-    def EXIT(self):
-        return
+    def JUMP(self): #<label>
+        label = self.program.get_argument_value(self.order, 1)
+        if not self.check_label(label):
+            sys.exit(52)
+        self.order_index = self.program.orders.index(self.program.labels[label])
+
+    def JUMPIFEQ(self): #<label> <symb1> <symb2>
+        label = self.program.get_argument_value(self.order, 1)
+        if not self.check_label(label):
+            sys.exit(52)
+
+        value1, value2 = self.relative()
+        if value1.value == value2.value:
+            self.order_index = self.program.orders.index(self.program.labels[label])
+        else:
+            self.order_index += 1
+
+    def JUMPIFNEQ(self):    #<label> <symb1> <symb2>
+        label = self.program.get_argument_value(self.order, 1)
+        if not self.check_label(label):
+            sys.exit(52)
+
+        value1, value2 = self.relative()
+        if value1.value != value2.value:
+            self.order_index = self.program.orders.index(self.program.labels[label])
+        else:
+            self.order_index += 1
+
+    def EXIT(self): #<symb>
+        type = self.program.get_argument_type(self.order, 1)
+        val = self.program.get_argument_value(self.order, 1)
+        value = self.get_symb_value(type, val)
+        if value.type != Value.Types.INT:
+            sys.exit(53)
+        if value.value < 0 or value.value > 49:
+            sys.exit(57)
+        sys.exit(value.value)
+
     
-    def DPRINT(self):
-        return
+    def DPRINT(self):   #<symb>
+        symb = self.program.get_argument_value(self.order, 1)
+        type = self.program.get_argument_type(self.order, 1)
+        value = self.get_symb_value(type, symb)
+        sys.stderr.write(str(value.value))
+        self.order_index += 1
 
     def BREAK(self):
         sys.stderr.write("###############\n")
