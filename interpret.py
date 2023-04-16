@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 import sys
 from collections import OrderedDict
 from enum import Enum
+import argparse
 
 #This list includes all opcodes
 opcodes = [ 'MOVE', 'CREATEFRAME', 'PUSHFRAME', 'POPFRAME', 'DEFVAR', 'CALL', 'RETURN',
@@ -154,9 +155,9 @@ class Frame:
             return False
         return True
             
-    
+#This class has algorithms for all instructions processing, attributes for frames, stacks and statistics and simple interface for starting the processing
 class Interpret:
-    def __init__(self, program):
+    def __init__(self, program, input):
         self.program = program
         self.global_frame = Frame()
         self.local_frames = []
@@ -166,6 +167,13 @@ class Interpret:
         self.processed_instructions = 0
         self.order = None
         self.order_index = None
+        if input == sys.stdin:
+            self.input = sys.stdin
+        else:
+            try:
+                self.input = open(input, "r")
+            except:
+                sys.exit(11)
 
 
     #This function returns the frame needed variable may be in
@@ -341,6 +349,7 @@ class Interpret:
         
         return value1.value, value2.value
     
+    #This function will process all instruction from the first one
     def process_program(self):
         self.order_index = 0
         while True:
@@ -351,6 +360,7 @@ class Interpret:
             eval("self." + opcode + "()")
             self.processed_instructions += 1
 
+    #Each instruction has it's own function and processing algorithm
 
     def MOVE(self): #<var> <symb>
         arg1 = self.program.get_argument_value(self.order, 1)
@@ -588,18 +598,18 @@ class Interpret:
         value = Value()
         try:
             if needed_type == 'int':
-                inp = int(input())
+                inp = int(self.input.readline().rstrip())
                 value.type = Value.Types.INT
                 value.value = inp
             elif needed_type == 'bool':
-                inp = input()
+                inp = self.input.readline().rstrip()
                 if inp == 'true':
                     value.value = True
                 else:
                     value.value = False
                 value.type = Value.Types.BOOL
             elif needed_type == 'string':
-                inp = input()
+                inp = self.input.readline().rstrip()
                 value.type = Value.Types.STRING
                 value.value = inp
         except:
@@ -613,14 +623,14 @@ class Interpret:
         type = self.program.get_argument_type(self.order, 1)
         value = self.get_symb_value(type, symb)
         if value.type == Value.Types.INT or value.type == Value.Types.STRING:
-            print(value.value)
+            print(value.value, end='')
         elif value.type == Value.Types.NIL:
-            print('')
+            print('', end='')
         else:
             if value.value == True:
-                print('true')
+                print('true', end='')
             else:
-                print('false')
+                print('false', end='')
         self.order_index += 1
     
     def CONCAT(self):   #<var> <symb1> <symb2>
@@ -826,8 +836,25 @@ class Interpret:
             sys.stderr.write(f"\t\ttype: {elem.type},\tvalue: {elem.value}\n")
         sys.stderr.write("###############\n")
         self.order_index += 1
-        
-program = Program('test.xml')
-interpret = Interpret(program)
 
+if '--help' in sys.argv and len(sys.argv) != 2:
+    sys.exit(10)
+parser = argparse.ArgumentParser(description='Skript (interpret.py v jazyce Python 3.10) načte XML reprezentaci programu a tento program s využitím vstupu dle parametrů příkazové řádky interpretuje a generuje výstup.')
+parser.add_argument('--input', help='soubor se vstupy pro samotnou interpretaci zadaného zdrojového kódu')
+parser.add_argument('--source', help='vstupní soubor s XML reprezentací zdrojového kódu')
+args = parser.parse_args()
+
+if args.input:
+    input = args.input
+    if not args.source:
+        source = sys.stdin
+if args.source:
+    source = args.source
+    if not args.input:
+        input = sys.stdin
+if not args.source and not args.input:
+    sys.exit(10)
+
+program = Program(source)
+interpret = Interpret(program, input)
 interpret.process_program()
