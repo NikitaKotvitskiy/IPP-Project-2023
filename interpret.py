@@ -309,6 +309,14 @@ class Interpret:
                 sys.exit(53)
         if value1.type == Value.Types.NIL and value2.type == Value.Types.NIL:
             sys.exit(53)
+        
+        #The main idea of that two if is following:
+        #Python specification says that any string * 0 is an emplty string
+        #Any bool value * 0 is false
+        #And math rules say that any integer * 0 is 0
+        #So in case of NIL value, we turn it's type on the second operator's type, and set the value to fact zero by multiplying second's value by 0
+        #In the end we have two operands with the same type, and one of them still represents NIL value (false, '' or 0)
+        #So we can easily compare that values
         if value1.type == Value.Types.NIL:
             value1.type == value2.type
             value1.value = value2.value * 0
@@ -317,7 +325,22 @@ class Interpret:
             value2.value = value1.value * 0
         
         return value1, value2
+    
+    #This help function realize all checks for logic instructions and returns two real bool values
+    def logic(self):
+        symb1 = self.program.get_argument_value(self.order, 2)
+        type1 = self.program.get_argument_type(self.order, 2)
+        symb2 = self.program.get_argument_value(self.order, 3)
+        type2 = self.program.get_argument_type(self.order, 3)
 
+        value1 = self.get_symb_value(type1, symb1)
+        value2 = self.get_symb_value(type2, symb2)
+
+        if value1.type != Value.Types.BOOL or value2.type != Value.Types.BOOL:
+            sys.exit(53)
+        
+        return value1.value, value2.value
+    
     def process_program(self):
         self.order_index = 0
         while True:
@@ -498,12 +521,42 @@ class Interpret:
         self.set_var_value(var, newValue)
         self.order_index += 1
     
-    def AND(self):
-        return
-    def OR(self):
-        return
-    def NOT(self):
-        return
+    def AND(self):  #<var> <symb1> <symb2>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+        
+        bool1, bool2 = self.logic()
+        value = Value()
+        value.set_value(bool, bool1 and bool2)
+        self.set_var_value(var, value)
+        self.order_index += 1
+
+    def OR(self):  #<var> <symb1> <symb2>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+        
+        bool1, bool2 = self.logic()
+        value = Value()
+        value.set_value(bool, bool1 or bool2)
+        self.set_var_value(var, value)
+        self.order_index += 1
+
+    def NOT(self):  #<var> <symb>
+        var = self.program.get_argument_value(self.order, 1)
+        if not self.check_var_defined(var):
+            sys.exit(54)
+        
+        symb = self.program.get_argument_value(self.order, 2)
+        type = self.program.get_argument_type(self.order, 2)
+        value = self.get_symb_value(type, symb)
+        if value.type != Value.Types.BOOL:
+            sys.exit(53)
+        value.set_value(bool, not value.value)
+        self.set_var_value(var, value)
+        self.order_index += 1
+
     def INT2CHAR(self):
         return
     def STRI2INT(self):

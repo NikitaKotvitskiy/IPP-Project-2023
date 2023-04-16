@@ -14,18 +14,19 @@
         <arg1 type="var">
             GF@var1
         </arg1>
-        <arg2 type="int"> 
-            0    
+        <arg2 type="bool"> 
+            true
         </arg2>
     </instruction>
     <instruction order="4" opcode="MOVE">
         <arg1 type="var">
             GF@var2
         </arg1>
-        <arg2 type="nil"> 
+        <arg2 type="bool">
+            false 
         </arg2>
     </instruction>
-    <instruction order="5" opcode="EQ">
+    <instruction order="5" opcode="AND">
         <arg1 type="var">
             GF@var1
         </arg1>
